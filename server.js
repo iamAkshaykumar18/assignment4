@@ -1,15 +1,20 @@
 /********************************************************************************
-*  WEB700 – Assignment 04
+*  WEB700 – Assignment 05
 * 
 *  I declare that this assignment is my own work in accordance with Seneca's
 *  Academic Integrity Policy:
 * 
 *  https://www.senecapolytechnic.ca/about/policies/academic-integrity-policy.html
 * 
-*  Name: Akshay Kumar Rayi    Student ID: ___136847241___ Date: ___nov/2/25_____
+*  Name: Akshay Kumar Rayi    Student ID: 136847241    Date: Nov/16/25
 *
+<<<<<<< Updated upstream
 
 * https://assignment4-alpha-ten.vercel.app/
+=======
+*  Published URL: _______________________________________
+*
+>>>>>>> Stashed changes
 ********************************************************************************/
 
 const express = require('express');
@@ -19,90 +24,100 @@ const port = process.env.PORT || 8080;
 
 const LegoData = require('./data/legoData');
 
-// identify public folder for static files
+// static folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// create an instance of LegoData
-const lego = new LegoData();
+// form middleware
+app.use(express.urlencoded({ extended: true }));
 
-// routes serving static html files from views
+// EJS setup
+app.set('view engine', 'ejs');
+app.set('views', __dirname + '/views');
+
+// LegoData instance
+const legoData = new LegoData();
+
+legoData.initialize()
+  .then(() => {
+    app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+  })
+  .catch(err => console.log("Initialization Error:", err));
+
+// ---------------------- ROUTES -------------------------
+
+// HOME
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'home.html'));
+  res.render('home');
 });
 
+// ABOUT
 app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'about.html'));
+  res.render('about');
 });
 
-// route to display lego sets in a simple HTML
-app.get('/lego/sets', (req, res) => {
-  const sets = lego.getAllSets();
-  // produce a simple HTML page showing current sets
-  let html = `
-  <!doctype html>
-  <html>
-    <head>
-      <meta charset="utf-8"/>
-      <title>Lego Sets</title>
-      <link rel="stylesheet" href="/css/theme.css">
-    </head>
-    <body>
-      <nav class="navbar bg-light">
-        <div class="navbar-brand">Akshay's Lego Collection</div>
-        <div class="nav-links"><a class="nav-link" href="/">Home</a> | <a class="nav-link" href="/about">About</a></div>
-      </nav>
-      <main class="container">
-        <h1>All Lego Sets</h1>
-        <p>Below are the LEGO sets currently in the memory of this running app.</p>
-        <div class="sets-grid">
-  `;
-  sets.forEach(s => {
-    html += `
-      <article class="set-card">
-        <img src="${s.img_url}" alt="Image for ${s.name}" />
-        <h3>${s.name} (${s.set_num})</h3>
-        <p>Year: ${s.year} • Theme ID: ${s.theme_id} • Parts: ${s.num_parts}</p>
-      </article>
-    `;
-  });
-
-  html += `
-        </div>
-        <p><a href="/lego/add-test">Add a test set (visit once to add; repeat to see error)</a></p>
-      </main>
-    </body>
-  </html>
-  `;
-  res.send(html);
+// ADD SET - FORM
+app.get('/lego/addSet', async (req, res) => {
+  try {
+    const themes = await legoData.getAllThemes();
+    res.render('addSet', { themes });
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
-// route implementing add-test as per assignment spec
-app.get('/lego/add-test', (req, res) => {
-  const testSet = {
-    set_num: "123",
-    name: "testSet name",
-    year: "2024",
-    theme_id: "366",
-    num_parts: "123",
-    img_url: "https://fakeimg.pl/375x375?text=[+Lego+]"
-  };
+// ADD SET - PROCESS FORM
+app.post('/lego/addSet', async (req, res) => {
+  try {
+    let foundTheme = await legoData.getThemeById(req.body.theme_id);
+    req.body.theme = foundTheme.name;
 
-  lego.addSet(testSet)
-    .then(() => {
-      // successful -> redirect to /lego/sets
-      res.redirect('/lego/sets');
-    })
-    .catch(err => {
-      // unsuccessful -> set 422 and return the error
-      res.status(422).send({ error: err });
-    });
+    await legoData.addSet(req.body);
+    res.redirect("/lego/sets");
+
+  } catch (err) {
+    res.status(422).send(err);
+  }
 });
 
-// fallback 404
+// SHOW ALL SETS (with filter)
+app.get('/lego/sets', async (req, res) => {
+  try {
+    const themes = await legoData.getAllThemes();
+    let sets = legoData.getAllSets();
+
+    if (req.query.theme) {
+      const filter = req.query.theme.toLowerCase();
+      sets = sets.filter(s => s.theme.toLowerCase() === filter);
+    }
+
+    res.render("sets", { sets, themes });
+
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+// SINGLE SET DETAILS
+app.get('/lego/sets/:set_num', async (req, res) => {
+  try {
+    const set = await legoData.getSetByNum(req.params.set_num);
+    res.render("set", { set });
+  } catch (err) {
+    res.status(404).send(err);
+  }
+});
+
+// DELETE SET
+app.get("/lego/deleteSet/:set_num", async (req, res) => {
+  try {
+    await legoData.deleteSetByNum(req.params.set_num);
+    res.redirect("/lego/sets");
+  } catch (err) {
+    res.status(404).send(err);
+  }
+});
+
+// 404
 app.use((req, res) => {
-  res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
-});
-
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+  res.status(404).render("404");
 });

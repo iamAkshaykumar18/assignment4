@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Collection</title>
+  <link rel="stylesheet" href="/css/theme.css">
+
+  <style>
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    .thumb { width: 100px; height: 100px; background-size: cover; }
+    .btn { padding: 5px 10px; border: 1px solid #333; border-radius: 5px; text-decoration:none; }
+  </style>
+</head>
+<body>
+
+<%- include('partials/navbar', {page:'/lego/sets'}) %>
+
+<main class="container">
+
+  <h1>Collection</h1>
+
+  <p>Filter:
+    <a href="/lego/sets">All</a>
+    <% themes.forEach(t => { %>
+      | <a href="/lego/sets?theme=<%= t.name %>"><%= t.name %></a>
+    <% }) %>
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Image</th>
+        <th>Name</th>
+        <th>Theme</th>
+        <th>Year</th>
+        <th>Parts</th>
+        <th></th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <% sets.forEach(s => { %>
+      <tr>
+        <td>
+          <div class="thumb" style="background-image:url('<%= s.img_url %>')"></div>
+        </td>
+        <td><%= s.name %></td>
+        <td>
+          <a class="btn" href="/lego/sets?theme=<%= s.theme %>"><%= s.theme %></a>
+        </td>
+        <td><%= s.year %></td>
+        <td><%= s.num_parts %></td>
+        <td>
+          <a class="btn" href="/lego/sets/<%= s.set_num %>">details</a>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+</main>
+
+</body>
+</html>
